@@ -137,20 +137,23 @@ elif menu == "👥 Employees":
         with c3:
             salary = st.number_input("Salary", min_value=0.0, key="add_emp_salary")
 
-        if st.form_submit_button("Add"):
-            if eid not in employees["ID"].values:
-                employees.loc[len(employees)] = [eid, name, salary]
-                save_employees(employees)
+if st.form_submit_button("Add"):
+    if eid in employees["ID"].values:
+        st.warning("⚠️ Employee ID already exists!")
+    elif name in employees["Name"].values:
+        st.warning("⚠️ Employee Name already exists!")
+    else:
+        employees.loc[len(employees)] = [eid, name, salary]
+        save_employees(employees)
         save_monthly_snapshots(employees, attendance, advances)
-                st.success("✅ Employee added successfully!")
+        st.success("✅ Employee added successfully!")
 
-                # Clear form inputs
-                st.session_state.setdefault("add_emp_id", "")
-                st.session_state.setdefault("add_emp_name", "")
-                st.session_state.setdefault("add_emp_salary", 0.0)
+        # Clear form inputs
+        st.session_state["add_emp_id"] = ""
+        st.session_state["add_emp_name"] = ""
+        st.session_state["add_emp_salary"] = 0.0
 
-            else:
-                st.warning("⚠️ Employee ID already exists!")
+
 
     st.write("Employees")
     edited = st.data_editor(employees, use_container_width=True, num_rows="dynamic")
