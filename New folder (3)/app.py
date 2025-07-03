@@ -129,25 +129,31 @@ if menu == "🚪 Logout":
 elif menu == "👥 Employees":
     st.subheader("Manage Employees")
     with st.form("add_emp"):
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            eid = st.text_input("ID", key="add_emp_id")
-        with c2:
-            name = st.text_input("Name", key="add_emp_name")
-        with c3:
-            salary = st.number_input("Salary", min_value=0.0, key="add_emp_salary")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        eid = st.text_input("ID", key="add_emp_id")
+    with c2:
+        name = st.text_input("Name", key="add_emp_name")
+    with c3:
+        salary = st.number_input("Salary", min_value=0.0, key="add_emp_salary")
 
-        if st.form_submit_button("Add"):
-            if eid not in employees["ID"].values:
-                employees.loc[len(employees)] = [eid, name, salary]
-                save_employees(employees)
-        save_monthly_snapshots(employees, attendance, advances)
-                st.success("✅ Employee added successfully!")
+    submit = st.form_submit_button("Add")
+    if submit:
+        if eid in employees["ID"].values:
+            st.warning("⚠️ Employee ID already exists!")
+        elif name in employees["Name"].values:
+            st.warning("⚠️ Employee Name already exists!")
+        else:
+            employees.loc[len(employees)] = [eid, name, salary]
+            save_employees(employees)
+            save_monthly_snapshots(employees, attendance, advances)
+            st.success("✅ Employee added successfully!")
 
-                # Clear form inputs
-                st.session_state.setdefault("add_emp_id", "")
-                st.session_state.setdefault("add_emp_name", "")
-                st.session_state.setdefault("add_emp_salary", 0.0)
+            # Clear form inputs
+            st.session_state["add_emp_id"] = ""
+            st.session_state["add_emp_name"] = ""
+            st.session_state["add_emp_salary"] = 0.0
+
 
             else:
                 st.warning("⚠️ Employee ID already exists!")
