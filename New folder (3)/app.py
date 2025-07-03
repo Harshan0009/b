@@ -172,8 +172,15 @@ elif menu == "👥 Employees":
 #Attendance
 elif menu == "📝 Attendance":
     st.subheader("📝 Mark Attendance")
+
+    # 🔒 Check if employees exist
+    if employees.empty:
+        st.warning("🚫 No employees found. Please add employees first in the '👥 Employees' section.")
+        st.stop()
+
     sel_date = st.date_input("Select Date", value=date.today())
     date_str = sel_date.strftime("%Y-%m-%d")
+
 
     already_marked = date_str in attendance["Date"].values
 
