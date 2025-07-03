@@ -128,7 +128,6 @@ if menu == "🚪 Logout":
 #employees
 elif menu == "👥 Employees":
     st.subheader("Manage Employees")
-    
     with st.form("add_emp"):
         c1, c2, c3 = st.columns(3)
         with c1:
@@ -138,25 +137,20 @@ elif menu == "👥 Employees":
         with c3:
             salary = st.number_input("Salary", min_value=0.0, key="add_emp_salary")
 
-        submit = st.form_submit_button("Add")
-        if submit:
-            if eid in employees["ID"].values:
-                st.warning("⚠️ Employee ID already exists!")
-            elif name in employees["Name"].values:
-                st.warning("⚠️ Employee Name already exists!")
-            else:
+        if st.form_submit_button("Add"):
+            if eid not in employees["ID"].values:
                 employees.loc[len(employees)] = [eid, name, salary]
                 save_employees(employees)
-                save_monthly_snapshots(employees, attendance, advances)
+        save_monthly_snapshots(employees, attendance, advances)
                 st.success("✅ Employee added successfully!")
 
                 # Clear form inputs
-                st.session_state["add_emp_id"] = ""
-                st.session_state["add_emp_name"] = ""
-                st.session_state["add_emp_salary"] = 0.0
+                st.session_state.setdefault("add_emp_id", "")
+                st.session_state.setdefault("add_emp_name", "")
+                st.session_state.setdefault("add_emp_salary", 0.0)
 
-
-
+            else:
+                st.warning("⚠️ Employee ID already exists!")
 
     st.write("Employees")
     edited = st.data_editor(employees, use_container_width=True, num_rows="dynamic")
@@ -172,15 +166,8 @@ elif menu == "👥 Employees":
 #Attendance
 elif menu == "📝 Attendance":
     st.subheader("📝 Mark Attendance")
-
-    # 🔒 Check if employees exist
-    if employees.empty:
-        st.warning("🚫 No employees found. Please add employees first in the '👥 Employees' section.")
-        st.stop()
-
     sel_date = st.date_input("Select Date", value=date.today())
     date_str = sel_date.strftime("%Y-%m-%d")
-
 
     already_marked = date_str in attendance["Date"].values
 
@@ -238,7 +225,11 @@ elif menu == "📊 Dashboard":
         # --- Monthly Summary ---
         with tab1:
             month = st.selectbox("Select Month", sorted(attendance["Date"].str[:7].unique(), reverse=True))
-            monthly = attendance[attendance["Date"].str.startswith(month)]
+            
+    if not attendance.empty and "Date" in attendance.columns:
+        attendance["Date"] = attendance["Date"].astype(str)
+
+    monthly = attendance[attendance["Date"].str.startswith(month)]
             counts = monthly.groupby(["ID", "Status"]).size().unstack(fill_value=0)
             for s in ["Present", "Absent", "Half Day", "Company Holiday", "Sunday"]:
                 if s not in counts.columns:
@@ -280,7 +271,11 @@ if menu == "💰 Salary Report":
     if attendance.empty: st.info("No data.")
     else:
         month = st.selectbox("Month", sorted(attendance["Date"].str[:7].unique(), reverse=True), key="sal_month")
-        monthly = attendance[attendance["Date"].str.startswith(month)]
+        
+    if not attendance.empty and "Date" in attendance.columns:
+        attendance["Date"] = attendance["Date"].astype(str)
+
+    monthly = attendance[attendance["Date"].str.startswith(month)]
         counts = monthly.groupby(["ID", "Status"]).size().unstack(fill_value=0)
         for s in ["Present", "Absent", "Half Day", "Company Holiday", "Sunday"]:
             if s not in counts.columns: counts[s] = 0
@@ -332,7 +327,11 @@ elif menu == "📄 Salary Slips":
 
 
         # Filter attendance for the employee & month
-        emp_att = attendance[(attendance["Name"] == selected_emp) & (attendance["Date"].str.startswith(selected_month))]
+        
+    if not attendance.empty and "Date" in attendance.columns:
+        attendance["Date"] = attendance["Date"].astype(str)
+
+    emp_att = attendance[(attendance["Name"] == selected_emp) & (attendance["Date"].str.startswith(selected_month))]
         counts = emp_att["Status"].value_counts().to_dict()
 
         # Fill missing statuses
@@ -465,7 +464,11 @@ elif menu == "📤 Export":
         st.download_button("📥 Download Attendance CSV", filtered.to_csv(index=False), file_name=f"{selected_employee}_{selected_month}_attendance.csv", mime="text/csv")
 
     elif export_type == "Salary Report":
-        monthly = attendance[attendance["Date"].str.startswith(selected_month)]
+        
+    if not attendance.empty and "Date" in attendance.columns:
+        attendance["Date"] = attendance["Date"].astype(str)
+
+    monthly = attendance[attendance["Date"].str.startswith(selected_month)]
         status_counts = monthly.groupby(["Name", "Status"]).size().unstack(fill_value=0)
         for status in ["Present", "Absent", "Half Day", "Company Holiday", "Sunday"]:
             if status not in status_counts.columns:
