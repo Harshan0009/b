@@ -1,61 +1,52 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime,date
+from datetime import datetime, date
 import os
 import calendar
 import shutil
 
-def backup_file(file_path):
-    if os.path.exists(file_path):
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_folder = "backup"
-        os.makedirs(backup_folder, exist_ok=True)
-        file_name = os.path.basename(file_path)
-        backup_name = f"{file_name}_{timestamp}.bak"
-        shutil.copy(file_path, os.path.join(backup_folder, backup_name))
-
-
-# File paths
+# File Paths
 EMPLOYEE_FILE = "data/employees.csv"
 ATTENDANCE_FILE = "data/attendance.csv"
 ADVANCE_FILE = "data/advance_cash.csv"
+BACKUP_FOLDER = "backup"
+SNAPSHOT_FOLDER = "monthly_snapshots"
 
-st.set_page_config(page_title="InOffice", layout="wide")
-
-if st.session_state.get("logout_triggered"):
-    for key in ["authenticated", "role", "logout_triggered"]:
-        st.session_state.pop(key, None)
-    st.rerun()
-
+# Ensure required folders exist
 os.makedirs("data", exist_ok=True)
+os.makedirs(BACKUP_FOLDER, exist_ok=True)
+os.makedirs(SNAPSHOT_FOLDER, exist_ok=True)
 
+# Backup function
+def backup_file(file_path):
+    if os.path.exists(file_path):
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        file_name = os.path.basename(file_path)
+        backup_name = f"{file_name}_{timestamp}.bak"
+        shutil.copy(file_path, os.path.join(BACKUP_FOLDER, backup_name))
 
+# Monthly snapshot
 def save_monthly_snapshots(employees_df, attendance_df, advances_df):
     today = date.today()
     month_str = today.strftime("%Y-%m")
-    snapshot_folder = "monthly_snapshots"
-    os.makedirs(snapshot_folder, exist_ok=True)
 
-    # Save Employees snapshot
-    emp_file = os.path.join(snapshot_folder, f"employees_{month_str}.csv")
+    emp_file = os.path.join(SNAPSHOT_FOLDER, f"employees_{month_str}.csv")
     if not os.path.exists(emp_file):
         employees_df.to_csv(emp_file, index=False)
 
-    # Save Attendance snapshot
-    att_file = os.path.join(snapshot_folder, f"attendance_{month_str}.csv")
+    att_file = os.path.join(SNAPSHOT_FOLDER, f"attendance_{month_str}.csv")
     if not os.path.exists(att_file):
         month_data = attendance_df[attendance_df["Date"].str.startswith(month_str)]
         if not month_data.empty:
             month_data.to_csv(att_file, index=False)
 
-    # Save Advance Cash snapshot
-    adv_file = os.path.join(snapshot_folder, f"advance_cash_{month_str}.csv")
+    adv_file = os.path.join(SNAPSHOT_FOLDER, f"advance_cash_{month_str}.csv")
     if not os.path.exists(adv_file):
         month_adv = advances_df[advances_df["Month"] == month_str]
         if not month_adv.empty:
             month_adv.to_csv(adv_file, index=False)
 
-
+# Load or initialize data
 def load_data():
     if not os.path.exists(EMPLOYEE_FILE):
         pd.DataFrame(columns=["ID", "Name", "Salary"]).to_csv(EMPLOYEE_FILE, index=False)
@@ -67,19 +58,26 @@ def load_data():
     employees = pd.read_csv(EMPLOYEE_FILE)
     attendance = pd.read_csv(ATTENDANCE_FILE)
     advances = pd.read_csv(ADVANCE_FILE)
+
+    if not attendance.empty and "Date" in attendance.columns:
+        attendance["Date"] = attendance["Date"].astype(str)
+
     return employees, attendance, advances
 
+# Save helpers
 def save_employees(df):
     backup_file(EMPLOYEE_FILE)
     df.to_csv(EMPLOYEE_FILE, index=False)
+
 def save_attendance(df):
     backup_file(ATTENDANCE_FILE)
     df.to_csv(ATTENDANCE_FILE, index=False)
+
 def save_advances(df):
     backup_file(ADVANCE_FILE)
     df.to_csv(ADVANCE_FILE, index=False)
 
-#🔐Login 
+# Login
 def login():
     st.title("🔐 InOffice Login")
     username = st.text_input("Username")
@@ -89,36 +87,44 @@ def login():
         if username == "admin" and password == "admin123":
             st.session_state.authenticated = True
             st.session_state.role = "admin"
-            st.session_state.rerun_trigger = True
+            st.rerun()
         elif username == "hr" and password == "hr123":
             st.session_state.authenticated = True
             st.session_state.role = "hr"
-            st.session_state.rerun_trigger = True
+            st.rerun()
         else:
             st.error("Incorrect UserID or Password")
 
+# Set up page
+st.set_page_config(page_title="InOffice", layout="wide")
+
+# Handle logout
+if st.session_state.get("logout_triggered"):
+    for key in ["authenticated", "role", "logout_triggered"]:
+        st.session_state.pop(key, None)
+    st.rerun()
+
+# Load data
 employees, attendance, advances = load_data()
 
+# Authenticate
 if not st.session_state.get("authenticated", False):
     login()
-    if st.session_state.get("rerun_trigger"):
-        st.session_state.pop("rerun_trigger")
-        st.rerun()
     st.stop()
-#Admin & hr login details
+
+# Menu based on role
 role = st.session_state.get("role", "")
-if role == "admin":
-    menu_options = [
+menu_options = {
+    "admin": [
         "👥 Employees", "📝 Attendance", "📊 Dashboard", "💰 Salary Report",
         "📄 Salary Slips", "🏦 Advance Cash", "📤 Export", "🚪 Logout"
-    ]
-elif role == "hr":
-    menu_options = ["📝 Attendance", "🚪 Logout"]
-else:
-    menu_options = ["🚪 Logout"]
+    ],
+    "hr": ["📝 Attendance", "🚪 Logout"]
+}.get(role, ["🚪 Logout"])
 
 menu = st.sidebar.radio("Menu", menu_options)
-#logout 
+
+# Handle logout
 if menu == "🚪 Logout":
     for key in list(st.session_state.keys()):
         del st.session_state[key]
