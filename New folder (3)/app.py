@@ -135,14 +135,14 @@ if menu == "🚪 Logout":
 elif menu == "👥 Employees":
     st.subheader("Manage Employees")
 
-   with st.form("add_emp"):
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        eid = st.text_input("ID", key="add_emp_id")
-    with c2:
-        name = st.text_input("Name", key="add_emp_name")
-    with c3:
-        salary = st.number_input("Salary", min_value=0.0, key="add_emp_salary")
+       with st.form("add_emp"):
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            eid = st.text_input("ID", key="add_emp_id")
+        with c2:
+            name = st.text_input("Name", key="add_emp_name")
+        with c3:
+            salary = st.number_input("Salary", min_value=0.0, key="add_emp_salary")
 
     submit = st.form_submit_button("Add")
     if submit:
